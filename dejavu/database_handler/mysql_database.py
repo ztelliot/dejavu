@@ -6,7 +6,7 @@ from mysql.connector.errors import DatabaseError
 from dejavu.base_classes.common_database import CommonDatabase
 from dejavu.config.settings import (FIELD_FILE_SHA1, FIELD_FINGERPRINTED,
                                     FIELD_HASH, FIELD_OFFSET, FIELD_SONG_ID,
-                                    FIELD_SONGNAME, FIELD_TOTAL_HASHES,
+                                    FIELD_SONGNAME, FIELD_TOTAL_HASHES, FIELD_PUBLISHER, FIELD_SONG_LENGTH,
                                     FINGERPRINTS_TABLENAME, SONGS_TABLENAME)
 
 
@@ -21,6 +21,8 @@ class MySQLDatabase(CommonDatabase):
         ,   `{FIELD_FINGERPRINTED}` TINYINT DEFAULT 0
         ,   `{FIELD_FILE_SHA1}` BINARY(20) NOT NULL
         ,   `{FIELD_TOTAL_HASHES}` INT NOT NULL DEFAULT 0
+        ,   `{FIELD_PUBLISHER}` VARCHAR(16) DEFAULT NULL
+        ,   `{FIELD_SONG_LENGTH}` FLOAT DEFAULT NULL                
         ,   `date_created` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
         ,   `date_modified` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ,   CONSTRAINT `pk_{SONGS_TABLENAME}_{FIELD_SONG_ID}` PRIMARY KEY (`{FIELD_SONG_ID}`)
