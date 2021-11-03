@@ -11,6 +11,7 @@ class CommonDatabase(BaseDatabase, metaclass=abc.ABCMeta):
 
     def __init__(self):
         super().__init__()
+        self.audio_file_publisher = None
 
     def before_fork(self) -> None:
         """
@@ -26,7 +27,7 @@ class CommonDatabase(BaseDatabase, metaclass=abc.ABCMeta):
         """
         pass
 
-    def setup(self) -> None:
+    def setup(self, audio_file_publisher=None) -> None:
         """
         Called on creation or shortly afterwards.
         """
@@ -34,6 +35,7 @@ class CommonDatabase(BaseDatabase, metaclass=abc.ABCMeta):
             cur.execute(self.CREATE_SONGS_TABLE)
             cur.execute(self.CREATE_FINGERPRINTS_TABLE)
             cur.execute(self.DELETE_UNFINGERPRINTED)
+        self.audio_file_publisher = audio_file_publisher
 
     def empty(self) -> None:
         """
@@ -94,6 +96,7 @@ class CommonDatabase(BaseDatabase, metaclass=abc.ABCMeta):
         """
         with self.cursor(dictionary=True) as cur:
             cur.execute(self.SELECT_SONGS)
+            # !! cur.execute(self.SELECT_SONGS, (self.audio_file_publisher,))
             return list(cur)
 
     def get_song_by_id(self, song_id: int) -> Dict[str, str]:
@@ -202,9 +205,9 @@ class CommonDatabase(BaseDatabase, metaclass=abc.ABCMeta):
         with self.cursor() as cur:
             for index in range(0, len(values), batch_size):
                 # Create our IN part of the query
-                query = self.SELECT_MULTIPLE % ', '.join([self.IN_MATCH] * len(values[index: index + batch_size]))
-
-                cur.execute(query, values[index: index + batch_size])
+                query = self.SELECT_MULTIPLE % (', '.join([self.IN_MATCH] * len(values[index: index + batch_size])),
+                                                "%s")
+                cur.execute(query, values[index: index + batch_size] + [self.audio_file_publisher])
 
                 for hsh, sid, offset in cur:
                     if sid not in dedup_hashes.keys():

@@ -21,7 +21,7 @@ class MySQLDatabase(CommonDatabase):
         ,   `{FIELD_FINGERPRINTED}` TINYINT DEFAULT 0
         ,   `{FIELD_FILE_SHA1}` BINARY(20) NOT NULL
         ,   `{FIELD_TOTAL_HASHES}` INT NOT NULL DEFAULT 0
-        ,   `{FIELD_PUBLISHER}` VARCHAR(16) DEFAULT NULL
+        ,   `{FIELD_PUBLISHER}` VARCHAR(16) DEFAULT 'Unknown'
         ,   `{FIELD_SONG_LENGTH}` FLOAT DEFAULT NULL                
         ,   `date_created` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
         ,   `date_modified` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -67,9 +67,11 @@ class MySQLDatabase(CommonDatabase):
     """
 
     SELECT_MULTIPLE = f"""
-        SELECT HEX(`{FIELD_HASH}`), `{FIELD_SONG_ID}`, `{FIELD_OFFSET}`
-        FROM `{FINGERPRINTS_TABLENAME}`
-        WHERE `{FIELD_HASH}` IN (%s);
+        SELECT HEX(fin.`{FIELD_HASH}`), fin.`{FIELD_SONG_ID}`, fin.`{FIELD_OFFSET}`
+        FROM `{FINGERPRINTS_TABLENAME}` fin JOIN `{SONGS_TABLENAME}` son 
+            ON fin.`{FIELD_SONG_ID}` =  son.`{FIELD_SONG_ID}`  
+        WHERE fin.`{FIELD_HASH}` IN (%s)
+        AND son.`{FIELD_PUBLISHER}` = %s;
     """
 
     SELECT_ALL = f"SELECT `{FIELD_SONG_ID}`, `{FIELD_OFFSET}` FROM `{FINGERPRINTS_TABLENAME}`;"
@@ -98,6 +100,7 @@ class MySQLDatabase(CommonDatabase):
         FROM `{SONGS_TABLENAME}`
         WHERE `{FIELD_FINGERPRINTED}` = 1;
     """
+    # !!          AND `{FIELD_PUBLISHER}` = %s;
 
     # DROPS
     DROP_FINGERPRINTS = f"DROP TABLE IF EXISTS `{FINGERPRINTS_TABLENAME}`;"

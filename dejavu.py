@@ -23,7 +23,7 @@ def init(configpath):
         sys.exit(1)
 
     # create a Dejavu instance
-    return Dejavu(config)
+    return Dejavu(config, 'Unknown')
 
 
 if __name__ == '__main__':

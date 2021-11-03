@@ -19,14 +19,15 @@ from dejavu.logic.fingerprint import fingerprint
 
 
 class Dejavu:
-    def __init__(self, config):
+    def __init__(self, config, audio_file_publisher=None):
         self.config = config
+        self.audio_file_publisher = audio_file_publisher
 
         # initialize db
         db_cls = get_database(config.get("database_type", "mysql").lower())
 
         self.db = db_cls(**config.get("database", {}))
-        self.db.setup()
+        self.db.setup(audio_file_publisher)
 
         # if we should limit seconds fingerprinted,
         # None|-1 means use entire track
