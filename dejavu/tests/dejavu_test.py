@@ -19,11 +19,12 @@ from dejavu.logic.decoder import get_audio_name_from_path
 
 
 class DejavuTest:
-    def __init__(self, folder, seconds):
+    def __init__(self, folder, seconds, py_interpreter):
         super().__init__()
 
         self.test_folder = folder
         self.test_seconds = seconds
+        self.py_interpreter = py_interpreter
         self.test_songs = []
 
         print("test_seconds", self.test_seconds)
@@ -119,7 +120,7 @@ class DejavuTest:
             song = "_".join(splits[0:len(get_audio_name_from_path(f).split("_")) - 2])
             line = self.get_line_id(song)
             result = subprocess.check_output([
-                "python",
+                self.py_interpreter,
                 "dejavu.py",
                 '-r',
                 'file',

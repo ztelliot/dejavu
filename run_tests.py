@@ -13,7 +13,7 @@ from dejavu.tests.dejavu_test import (DejavuTest, autolabeldoubles,
 
 
 def main(seconds: int, results_folder: str, temp_folder: str, log: bool, silent: bool,
-         log_file: str, padding: int, seed: int, src: str):
+         log_file: str, padding: int, seed: int, py_interpreter: str, src: str):
 
     # set random seed if set by user
     set_seed(seed)
@@ -37,7 +37,7 @@ def main(seconds: int, results_folder: str, temp_folder: str, log: bool, silent:
     log_msg(f"Running Dejavu fingerprinter on files in {src}...", log=log, silent=silent)
 
     tm = time.time()
-    djv = DejavuTest(temp_folder, test_seconds)
+    djv = DejavuTest(temp_folder, test_seconds, py_interpreter)
     log_msg(f"finished obtaining results from dejavu in {(time.time() - tm)}", log=log, silent=silent)
 
     tests = 1  # djv
@@ -158,9 +158,11 @@ if __name__ == '__main__':
     parser.add_argument("-pad", "--padding", action="store", default=10, type=int,
                         help='Number of seconds to pad choice of place to test from.')
     parser.add_argument("-sd", "--seed", action="store", default=None, type=int, help='Random seed.')
+    parser.add_argument("-py", "--python", action="store", default="python",
+                        help='Path to python interpreter.\n', )
     parser.add_argument("src", type=str, help='Source folder for audios to use as tests.')
 
     args = parser.parse_args()
 
     main(args.seconds, args.results_folder, args.temp_folder, args.log, args.silent, args.log_file, args.padding,
-         args.seed, args.src)
+         args.seed, args.python, args.src)
