@@ -201,9 +201,16 @@ class Cursor(object):
     def execute(self, operation, params=(), multi=False):
         return self.cursor.execute(operation, params, multi)
 
+    def executemany(self, operation, seq_params):
+        return self.cursor.executemany(operation, seq_params)
+
     @DejavuTimer(name=__name__ + ".Cursor.fetchone()\t\t[agg]")
     def fetchone(self):
         return self.cursor.fetchone()
+
+    @property
+    def lastrowid(self):
+        return self.cursor.lastrowid
 
     def __iter__(self):
         return self.cursor.__iter__()

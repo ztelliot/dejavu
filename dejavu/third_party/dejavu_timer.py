@@ -2,7 +2,7 @@ import codetiming
 
 
 class DejavuTimer(codetiming.Timer):
-    timing_enabled = True
+    timing_enabled = False
 
     def __init__(self, name, logger=print):
         super().__init__(name=name, logger=logger, text="{name}:\t{:0.4f} seconds\t({milliseconds} ms)")
