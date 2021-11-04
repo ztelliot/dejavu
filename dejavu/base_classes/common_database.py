@@ -113,6 +113,30 @@ class CommonDatabase(BaseDatabase, metaclass=abc.ABCMeta):
             cur.execute(self.SELECT_SONG, (song_id,))
             return cur.fetchone()
 
+    def get_song_by_id1(self, song_ids: List[int])-> List[Dict[str, str]]:
+        """
+        Brings the song info from the database.
+
+        :param song_id: song identifier.
+        :return: a song by its identifier. Result must be a Dictionary.
+        """
+        with self.cursor(dictionary=True) as cur:
+            cur.execute(self.SELECT_SONG, (song_ids,))
+            return cur.fetchone()
+
+    @DejavuTimer(name=__name__ + ".get_songs_by_ids()\t\t\t")
+    def get_songs_by_ids(self, song_ids: List[int]) -> List[Dict[str, str]]:
+        """
+        Brings the song info from the database.
+
+        :param song_ids: song identifiers.
+        :return: songs by their identifiers. Result must be a List of Dictionaries.
+        """
+        query = self.SELECT_SONGS_BY_IDS % (', '.join(["%s"] * len(song_ids)))
+        with self.cursor(dictionary=True) as cur:
+            cur.execute(query, song_ids)
+            return cur.fetchall()
+
     def insert(self, fingerprint: str, song_id: int, offset: int):
         """
         Inserts a single fingerprint into the database.

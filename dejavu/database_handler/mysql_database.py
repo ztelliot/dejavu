@@ -84,6 +84,13 @@ class MySQLDatabase(CommonDatabase):
         WHERE `{FIELD_SONG_ID}` = %s;
     """
 
+    SELECT_SONGS_BY_IDS = f"""
+        SELECT `{FIELD_SONG_ID}`, `{FIELD_SONGNAME}`, 
+            HEX(`{FIELD_FILE_SHA1}`) AS `{FIELD_FILE_SHA1}`, `{FIELD_TOTAL_HASHES}`
+        FROM `{SONGS_TABLENAME}`
+        WHERE `{FIELD_SONG_ID}` IN (%s);
+    """
+
     SELECT_NUM_FINGERPRINTS = f"SELECT COUNT(*) AS n FROM `{FINGERPRINTS_TABLENAME}`;"
 
     SELECT_UNIQUE_SONG_IDS = f"""
@@ -195,6 +202,10 @@ class Cursor(object):
     @DejavuTimer(name=__name__ + ".Cursor.fetchone()\t\t[agg]")
     def fetchone(self):
         return self.cursor.fetchone()
+
+    @DejavuTimer(name=__name__ + ".Cursor.fetchall()\t\t")
+    def fetchall(self):
+        return self.cursor.fetchall()
 
     @property
     def lastrowid(self):
