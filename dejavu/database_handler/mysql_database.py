@@ -176,22 +176,10 @@ class Cursor(object):
     @DejavuTimer(name=__name__ + ".Cursor.__init__()\t\t[agg]")
     def __init__(self, dictionary=False, **options):
         super().__init__()
-
-        self._cache = queue.Queue(maxsize=5)
-
-        try:
-            conn = self._cache.get_nowait()
-            # Ping the connection before using it from the cache.
-            conn.ping(True)
-        except queue.Empty:
-            conn = mysql.connector.connect(**options)
-
-        self.conn = conn
+        #  https://dev.mysql.com/doc/connector-python/en/connector-python-connection-pooling.html
+        options.update({'pool_name': "dejavu-pool", 'pool_size': 1})
+        self.conn = mysql.connector.connect(**options)  # Cursor._conn
         self.dictionary = dictionary
-
-    @classmethod
-    def clear_cache(cls):
-        cls._cache = queue.Queue(maxsize=5)
 
     def __enter__(self):
         self.cursor = self.conn.cursor(dictionary=self.dictionary)
@@ -225,9 +213,4 @@ class Cursor(object):
 
         self.cursor.close()
         self.conn.commit()
-
-        # Put it back on the queue
-        try:
-            self._cache.put_nowait(self.conn)
-        except queue.Full:
-            self.conn.close()
+        self.conn.close()
