@@ -180,12 +180,16 @@ class Cursor(object):
         ...
     """
 
+    _conn = None
+
     @DejavuTimer(name=__name__ + ".Cursor.__init__()\t\t[agg]")
     def __init__(self, dictionary=False, **options):
         super().__init__()
         #  https://dev.mysql.com/doc/connector-python/en/connector-python-connection-pooling.html
-        options.update({'pool_name': "dejavu-pool", 'pool_size': 1})
-        self.conn = mysql.connector.connect(**options)  # Cursor._conn
+        # !! options.update({'pool_name': "dejavu-pool", 'pool_size': 1})
+        if Cursor._conn is None:
+            Cursor._conn = mysql.connector.connect(**options)  # Cursor._conn
+        self.conn = Cursor._conn
         self.dictionary = dictionary
 
     def __enter__(self):
@@ -224,4 +228,4 @@ class Cursor(object):
 
         self.cursor.close()
         self.conn.commit()
-        self.conn.close()
+        # !! self.conn.close()
