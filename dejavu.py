@@ -23,7 +23,9 @@ def init(configpath):
         sys.exit(1)
 
     # create a Dejavu instance
-    return Dejavu(config, 'Unknown')
+    dvj = Dejavu(config, 'Unknown')
+    dvj.setup()
+    return dvj
 
 
 if __name__ == '__main__':

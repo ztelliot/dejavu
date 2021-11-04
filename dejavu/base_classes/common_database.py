@@ -30,7 +30,7 @@ class CommonDatabase(BaseDatabase, metaclass=abc.ABCMeta):
         pass
 
     @DejavuTimer(name=__name__ + ".setup() (needless call)\t\t")
-    def setup(self, audio_file_publisher=None) -> None:
+    def setup(self) -> None:
         """
         Called on creation or shortly afterwards.
         """
@@ -38,7 +38,6 @@ class CommonDatabase(BaseDatabase, metaclass=abc.ABCMeta):
             cur.execute(self.CREATE_SONGS_TABLE)
             cur.execute(self.CREATE_FINGERPRINTS_TABLE)
             cur.execute(self.DELETE_UNFINGERPRINTED)
-        self.audio_file_publisher = audio_file_publisher
 
     def empty(self) -> None:
         """

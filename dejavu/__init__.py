@@ -4,7 +4,7 @@ import sys
 import traceback
 from itertools import groupby
 from time import time
-from typing import Dict, List, Tuple
+from typing import Dict, List, Set, Tuple
 
 import dejavu.logic.decoder as decoder
 from dejavu.base_classes.base_database import get_database
@@ -29,27 +29,30 @@ class Dejavu:
         db_cls = get_database(config.get("database_type", "mysql").lower())
 
         self.db = db_cls(**config.get("database", {}))
-        self.db.setup(audio_file_publisher)
+        self.db.audio_file_publisher = audio_file_publisher
 
         # if we should limit seconds fingerprinted,
         # None|-1 means use entire track
         self.limit = self.config.get("fingerprint_limit", None)
         if self.limit == -1:  # for JSON compatibility
             self.limit = None
-        self.__load_fingerprinted_audio_hashes()
+
+    def setup(self) -> None:
+        self.db.setup()
 
     @DejavuTimer(name=__name__ + ".__load_fingerprinted_audio_hashes()\t\t\t\t")
-    def __load_fingerprinted_audio_hashes(self) -> None:
+    def __load_fingerprinted_audio_hashes(self) -> Set[str]:
         """
         Keeps a dictionary with the hashes of the fingerprinted songs, in that way is possible to check
         whether or not an audio file was already processed.
         """
         # get songs previously indexed
         self.songs = self.db.get_songs()
-        self.songhashes_set = set()  # to know which ones we've computed before
+        songhashes_set = set()  # to know which ones we've computed before
         for song in self.songs:
             song_hash = song[FIELD_FILE_SHA1]
-            self.songhashes_set.add(song_hash)
+            songhashes_set.add(song_hash)
+        return songhashes_set
 
     def get_fingerprinted_songs(self) -> List[Dict[str, any]]:
         """
@@ -85,10 +88,11 @@ class Dejavu:
 
         pool = multiprocessing.Pool(nprocesses)
 
+        songhashes_set = self.__load_fingerprinted_audio_hashes()
         filenames_to_fingerprint = []
         for filename, _ in decoder.find_files(path, extensions):
             # don't refingerprint already fingerprinted files
-            if decoder.unique_hash(filename) in self.songhashes_set:
+            if decoder.unique_hash(filename) in songhashes_set:
                 print(f"{filename} already fingerprinted, continuing...")
                 continue
 
@@ -134,7 +138,8 @@ class Dejavu:
         song_hash = decoder.unique_hash(file_path)
         song_name = song_name or song_name_from_path
         # don't refingerprint already fingerprinted files
-        if song_hash in self.songhashes_set:
+        songhashes_set = self.__load_fingerprinted_audio_hashes()
+        if song_hash in songhashes_set:
             print(f"{song_name} already fingerprinted, continuing...")
         else:
             song_name, hashes, file_hash = Dejavu._fingerprint_worker(
