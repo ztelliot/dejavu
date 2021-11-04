@@ -17,7 +17,10 @@ from dejavu.config.settings import (CONNECTIVITY_MASK, DEFAULT_AMP_MIN,
                                     MIN_HASH_TIME_DELTA,
                                     PEAK_NEIGHBORHOOD_SIZE, PEAK_SORT)
 
+from dejavu.third_party.dejavu_timer import DejavuTimer
 
+
+@DejavuTimer(name=__name__ + ".fingerprint()\t\t\t\t\t")
 def fingerprint(channel_samples: List[int],
                 Fs: int = DEFAULT_FS,
                 wsize: int = DEFAULT_WINDOW_SIZE,
@@ -36,15 +39,17 @@ def fingerprint(channel_samples: List[int],
     :return: a list of hashes with their corresponding offsets.
     """
     # FFT the signal and extract frequency components
-    arr2D = mlab.specgram(
-        channel_samples,
-        NFFT=wsize,
-        Fs=Fs,
-        window=mlab.window_hanning,
-        noverlap=int(wsize * wratio))[0]
+    with (DejavuTimer(name=__name__ + ".fingerprint() - mlab.specgram(...\t\t")):
+        arr2D = mlab.specgram(
+            channel_samples,
+            NFFT=wsize,
+            Fs=Fs,
+            window=mlab.window_hanning,
+            noverlap=int(wsize * wratio))[0]
 
     # Apply log transform since specgram function returns linear array. 0s are excluded to avoid np warning.
-    arr2D = 10 * np.log10(arr2D, out=np.zeros_like(arr2D), where=(arr2D != 0))
+    with (DejavuTimer(name=__name__ + ".fingerprint() - np.log10(arr2D...\t\t")):
+        arr2D = 10 * np.log10(arr2D, out=np.zeros_like(arr2D), where=(arr2D != 0))
 
     local_maxima = get_2D_peaks(arr2D, plot=False, amp_min=amp_min)
 
@@ -52,6 +57,7 @@ def fingerprint(channel_samples: List[int],
     return generate_hashes(local_maxima, fan_value=fan_value)
 
 
+@DejavuTimer(name=__name__ + ".get_2D_peaks()\t\t\t\t\t")
 def get_2D_peaks(arr2D: np.array, plot: bool = False, amp_min: int = DEFAULT_AMP_MIN)\
         -> List[Tuple[List[int], List[int]]]:
     """
@@ -119,6 +125,7 @@ def get_2D_peaks(arr2D: np.array, plot: bool = False, amp_min: int = DEFAULT_AMP
     return list(zip(freqs_filter, times_filter))
 
 
+@DejavuTimer(name=__name__ + ".generate_hashes()\t\t\t\t")
 def generate_hashes(peaks: List[Tuple[int, int]], fan_value: int = DEFAULT_FAN_VALUE) -> List[Tuple[str, int]]:
     """
     Hash list structure:

@@ -8,6 +8,7 @@ from pydub import AudioSegment
 from pydub.utils import audioop
 
 from dejavu.third_party import wavio
+from dejavu.third_party.dejavu_timer import DejavuTimer
 
 
 def unique_hash(file_path: str, block_size: int = 2**20) -> str:
@@ -51,6 +52,7 @@ def find_files(path: str, extensions: List[str]) -> List[Tuple[str, str]]:
     return results
 
 
+@DejavuTimer(name=__name__ + ".read()\t\t\t\t\t\t")
 def read(file_name: str, limit: int = None) -> Tuple[List[List[int]], int, str]:
     """
     Reads any file supported by pydub (ffmpeg) and returns the data contained

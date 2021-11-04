@@ -6,19 +6,24 @@ import numpy as np
 
 from dejavu.config.settings import DEFAULT_FS
 
+from dejavu.third_party.dejavu_timer import DejavuTimer
+
 
 class BaseRecognizer(object, metaclass=abc.ABCMeta):
     def __init__(self, dejavu):
         self.dejavu = dejavu
         self.Fs = DEFAULT_FS
 
+    @DejavuTimer(name=__name__ + "._recognize()\t\t\t")
     def _recognize(self, *data) -> Tuple[List[Dict[str, any]], int, int, int]:
         fingerprint_times = []
         hashes = set()  # to remove possible duplicated fingerprints we built a set.
-        for channel in data:
-            fingerprints, fingerprint_time = self.dejavu.generate_fingerprints(channel, Fs=self.Fs)
-            fingerprint_times.append(fingerprint_time)
-            hashes |= set(fingerprints)
+
+        with (DejavuTimer(name=__name__ + "._recognize() - for channel...\t")):
+              for channel in data:
+                    fingerprints, fingerprint_time = self.dejavu.generate_fingerprints(channel, Fs=self.Fs)
+                    fingerprint_times.append(fingerprint_time)
+                    hashes |= set(fingerprints)
 
         matches, dedup_hashes, query_time = self.dejavu.find_matches(hashes)
 

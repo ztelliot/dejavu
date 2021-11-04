@@ -6,11 +6,14 @@ from dejavu.base_classes.base_recognizer import BaseRecognizer
 from dejavu.config.settings import (ALIGN_TIME, FINGERPRINT_TIME, QUERY_TIME,
                                     RESULTS, TOTAL_TIME)
 
+from dejavu.third_party.dejavu_timer import DejavuTimer
+
 
 class FileRecognizer(BaseRecognizer):
     def __init__(self, dejavu):
         super().__init__(dejavu)
 
+    @DejavuTimer(name=__name__ + ".recognize_file()\t\t")
     def recognize_file(self, filename: str) -> Dict[str, any]:
         channels, self.Fs, _ = decoder.read(filename, self.dejavu.limit)
 

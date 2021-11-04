@@ -9,6 +9,8 @@ from dejavu.config.settings import (FIELD_FILE_SHA1, FIELD_FINGERPRINTED,
                                     FIELD_SONGNAME, FIELD_TOTAL_HASHES, FIELD_PUBLISHER, FIELD_SONG_LENGTH,
                                     FINGERPRINTS_TABLENAME, SONGS_TABLENAME)
 
+from dejavu.third_party.dejavu_timer import DejavuTimer
+
 
 class MySQLDatabase(CommonDatabase):
     type = "mysql"
@@ -170,6 +172,8 @@ class Cursor(object):
         cur.execute(query)
         ...
     """
+
+    @DejavuTimer(name=__name__ + ".Cursor.__init__()\t\t[agg]")
     def __init__(self, dictionary=False, **options):
         super().__init__()
 
@@ -191,7 +195,21 @@ class Cursor(object):
 
     def __enter__(self):
         self.cursor = self.conn.cursor(dictionary=self.dictionary)
-        return self.cursor
+        return self
+
+    @DejavuTimer(name=__name__ + ".Cursor.execute()\t\t\t[agg]")
+    def execute(self, operation, params=(), multi=False):
+        return self.cursor.execute(operation, params, multi)
+
+    @DejavuTimer(name=__name__ + ".Cursor.fetchone()\t\t[agg]")
+    def fetchone(self):
+        return self.cursor.fetchone()
+
+    def __iter__(self):
+        return self.cursor.__iter__()
+
+    def __next__(self):
+        return self.cursor.__next__()
 
     def __exit__(self, extype, exvalue, traceback):
         # if we had a MySQL related error we try to rollback the cursor.

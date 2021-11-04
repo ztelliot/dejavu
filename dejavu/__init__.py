@@ -17,6 +17,8 @@ from dejavu.config.settings import (DEFAULT_FS, DEFAULT_OVERLAP_RATIO,
                                     OFFSET_SECS, SONG_ID, SONG_NAME, TOPN)
 from dejavu.logic.fingerprint import fingerprint
 
+from dejavu.third_party.dejavu_timer import DejavuTimer
+
 
 class Dejavu:
     def __init__(self, config, audio_file_publisher=None):
@@ -36,6 +38,7 @@ class Dejavu:
             self.limit = None
         self.__load_fingerprinted_audio_hashes()
 
+    @DejavuTimer(name=__name__ + ".__load_fingerprinted_audio_hashes()\t\t\t\t")
     def __load_fingerprinted_audio_hashes(self) -> None:
         """
         Keeps a dictionary with the hashes of the fingerprinted songs, in that way is possible to check
@@ -145,6 +148,7 @@ class Dejavu:
             self.db.set_song_fingerprinted(sid)
             self.__load_fingerprinted_audio_hashes()
 
+    @DejavuTimer(name=__name__ + ".generate_fingerprints()\t\t\t\t\t\t")
     def generate_fingerprints(self, samples: List[int], Fs=DEFAULT_FS) -> Tuple[List[Tuple[str, int]], float]:
         f"""
         Generate the fingerprints for the given sample data (channel).
@@ -158,6 +162,7 @@ class Dejavu:
         fingerprint_time = time() - t
         return hashes, fingerprint_time
 
+    @DejavuTimer(name=__name__ + ".find_matches()\t\t\t\t\t\t\t")
     def find_matches(self, hashes: List[Tuple[str, int]]) -> Tuple[List[Tuple[int, int]], Dict[str, int], float]:
         """
         Finds the corresponding matches on the fingerprinted audios for the given hashes.
@@ -173,6 +178,7 @@ class Dejavu:
 
         return matches, dedup_hashes, query_time
 
+    @DejavuTimer(name=__name__ + ".align_matches()\t\t\t\t\t\t\t")
     def align_matches(self, matches: List[Tuple[int, int]], dedup_hashes: Dict[str, int], queried_hashes: int,
                       topn: int = TOPN) -> List[Dict[str, any]]:
         """
@@ -222,6 +228,7 @@ class Dejavu:
 
         return songs_result
 
+    @DejavuTimer(name=__name__ + ".recognize()\t\t\t\t\t\t\t")
     def recognize(self, recognizer, *options, **kwoptions) -> Dict[str, any]:
         r = recognizer(self)
         return r.recognize(*options, **kwoptions)

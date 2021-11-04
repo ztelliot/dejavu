@@ -3,6 +3,8 @@ from typing import Dict, List, Tuple
 
 from dejavu.base_classes.base_database import BaseDatabase
 
+from dejavu.third_party.dejavu_timer import DejavuTimer
+
 
 class CommonDatabase(BaseDatabase, metaclass=abc.ABCMeta):
     # Since several methods across different databases are actually just the same
@@ -27,6 +29,7 @@ class CommonDatabase(BaseDatabase, metaclass=abc.ABCMeta):
         """
         pass
 
+    @DejavuTimer(name=__name__ + ".setup() (needless call)\t\t")
     def setup(self, audio_file_publisher=None) -> None:
         """
         Called on creation or shortly afterwards.
@@ -88,6 +91,7 @@ class CommonDatabase(BaseDatabase, metaclass=abc.ABCMeta):
         with self.cursor() as cur:
             cur.execute(self.UPDATE_SONG_FINGERPRINTED, (song_id,))
 
+    @DejavuTimer(name=__name__ + ".get_songs() (needless call)\t\t")
     def get_songs(self) -> List[Dict[str, str]]:
         """
         Returns all fully fingerprinted songs in the database
@@ -96,9 +100,9 @@ class CommonDatabase(BaseDatabase, metaclass=abc.ABCMeta):
         """
         with self.cursor(dictionary=True) as cur:
             cur.execute(self.SELECT_SONGS)
-            # !! cur.execute(self.SELECT_SONGS, (self.audio_file_publisher,))
             return list(cur)
 
+    @DejavuTimer(name=__name__ + ".get_song_by_id()\t\t\t[agg]")
     def get_song_by_id(self, song_id: int) -> Dict[str, str]:
         """
         Brings the song info from the database.
@@ -173,6 +177,7 @@ class CommonDatabase(BaseDatabase, metaclass=abc.ABCMeta):
             for index in range(0, len(hashes), batch_size):
                 cur.executemany(self.INSERT_FINGERPRINT, values[index: index + batch_size])
 
+    @DejavuTimer(name=__name__ + ".return_matches()\t\t\t")
     def return_matches(self, hashes: List[Tuple[str, int]],
                        batch_size: int = 1000) -> Tuple[List[Tuple[int, int]], Dict[int, int]]:
         """
