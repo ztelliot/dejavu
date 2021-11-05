@@ -205,11 +205,14 @@ class Dejavu:
             key=lambda count: count[2], reverse=True
         )
 
+        songs_result = []
+        if len(songs_matches) == 0:
+            return songs_result
+
         song_ids = [song_match[0] for song_match in songs_matches[0:topn]]
         songs = self.db.get_songs_by_ids(song_ids)
         songs_dict = {song[SONG_ID]: song for song in songs}
 
-        songs_result = []
         for song_id, offset, _ in songs_matches[0:topn]:  # consider topn elements in the result
             song = songs_dict.get(song_id)
 
