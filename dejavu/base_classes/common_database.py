@@ -237,7 +237,9 @@ class CommonDatabase(BaseDatabase, metaclass=abc.ABCMeta):
                                                 "%s")
                 cur.execute(query, values[index: index + batch_size] + [self.audio_file_publisher])
 
-                for hsh, sid, offset in cur:
+                cur_rows = cur.fetchall()
+
+                for hsh, sid, offset in cur_rows:
                     if sid not in dedup_hashes.keys():
                         dedup_hashes[sid] = 1
                     else:
