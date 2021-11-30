@@ -95,13 +95,3 @@ def read(file_name: str, limit: int = None) -> Tuple[List[List[int]], int, str]:
             channels.append(chn)
 
     return channels, audiofile.frame_rate, unique_hash(file_name)
-
-
-def get_audio_name_from_path(file_path: str) -> str:
-    """
-    Extracts song name from a file path.
-
-    :param file_path: path to an audio file.
-    :return: file name
-    """
-    return os.path.splitext(os.path.basename(file_path))[0]

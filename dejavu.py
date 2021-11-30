@@ -23,7 +23,7 @@ def init(configpath):
         sys.exit(1)
 
     # create a Dejavu instance
-    dvj = Dejavu(config, 'Unknown')
+    dvj = Dejavu(config)
     dvj.setup()
     return dvj
 

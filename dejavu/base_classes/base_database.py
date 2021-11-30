@@ -106,7 +106,8 @@ class BaseDatabase(object, metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def insert_song(self, song_name: str, file_hash: str, total_hashes: int) -> int:
+    def insert_song(self, song_name: str, file_hash: str, total_hashes: int, song_publisher: str, song_length: float,
+                    song_singer: str, song_album: str, song_public: str) -> int:
         """
         Inserts a song name into the database, returns the new
         identifier of the song.
@@ -114,6 +115,11 @@ class BaseDatabase(object, metaclass=abc.ABCMeta):
         :param song_name: The name of the song.
         :param file_hash: Hash from the fingerprinted file.
         :param total_hashes: amount of hashes to be inserted on fingerprint table.
+        :param song_publisher: The publisher of the song.
+        :param song_length: The length of the song.
+        :param song_singer: The singer of the song.
+        :param song_album: The album of the song.
+        :param song_public: The public time of the song.
         :return: the inserted id.
         """
         pass

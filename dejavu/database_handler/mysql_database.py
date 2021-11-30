@@ -1,5 +1,3 @@
-import queue
-
 import mysql.connector
 from mysql.connector.errors import DatabaseError
 
@@ -7,6 +5,7 @@ from dejavu.base_classes.common_database import CommonDatabase
 from dejavu.config.settings import (FIELD_FILE_SHA1, FIELD_FINGERPRINTED,
                                     FIELD_HASH, FIELD_OFFSET, FIELD_SONG_ID,
                                     FIELD_SONGNAME, FIELD_TOTAL_HASHES, FIELD_PUBLISHER, FIELD_SONG_LENGTH,
+                                    FIELD_SINGER, FIELD_ALBUM, FIELD_PUBLICTIME,
                                     FINGERPRINTS_TABLENAME, SONGS_TABLENAME)
 
 from dejavu.third_party.dejavu_timer import DejavuTimer
@@ -23,8 +22,11 @@ class MySQLDatabase(CommonDatabase):
         ,   `{FIELD_FINGERPRINTED}` TINYINT DEFAULT 0
         ,   `{FIELD_FILE_SHA1}` BINARY(20) NOT NULL
         ,   `{FIELD_TOTAL_HASHES}` INT NOT NULL DEFAULT 0
-        ,   `{FIELD_PUBLISHER}` VARCHAR(16) DEFAULT 'Unknown'
-        ,   `{FIELD_SONG_LENGTH}` FLOAT DEFAULT NULL                
+        ,   `{FIELD_PUBLISHER}` VARCHAR(64) DEFAULT 'Unknown'
+        ,   `{FIELD_SONG_LENGTH}` FLOAT DEFAULT NULL
+        ,   `{FIELD_SINGER}` VARCHAR(64) DEFAULT 'Unknown'
+        ,   `{FIELD_ALBUM}` VARCHAR(64) DEFAULT 'Unknown'
+        ,   `{FIELD_PUBLICTIME}` VARCHAR(64) DEFAULT 'Unknown'
         ,   `date_created` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
         ,   `date_modified` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ,   CONSTRAINT `pk_{SONGS_TABLENAME}_{FIELD_SONG_ID}` PRIMARY KEY (`{FIELD_SONG_ID}`)
@@ -57,8 +59,9 @@ class MySQLDatabase(CommonDatabase):
     """
 
     INSERT_SONG = f"""
-        INSERT INTO `{SONGS_TABLENAME}` (`{FIELD_SONGNAME}`,`{FIELD_FILE_SHA1}`,`{FIELD_TOTAL_HASHES}`)
-        VALUES (%s, UNHEX(%s), %s);
+        INSERT INTO `{SONGS_TABLENAME}` (`{FIELD_SONGNAME}`,`{FIELD_FILE_SHA1}`,`{FIELD_TOTAL_HASHES}`,
+            `{FIELD_PUBLISHER}`,`{FIELD_SONG_LENGTH}`,`{FIELD_SINGER}`,`{FIELD_ALBUM}`,`{FIELD_PUBLICTIME}`)
+        VALUES (%s, UNHEX(%s), %s, %s, %s, %s, %s, %s);
     """
 
     # SELECTS
@@ -69,24 +72,24 @@ class MySQLDatabase(CommonDatabase):
     """
 
     SELECT_MULTIPLE = f"""
-        SELECT HEX(fin.`{FIELD_HASH}`), fin.`{FIELD_SONG_ID}`, fin.`{FIELD_OFFSET}`
-        FROM `{FINGERPRINTS_TABLENAME}` fin JOIN `{SONGS_TABLENAME}` son 
-            ON fin.`{FIELD_SONG_ID}` =  son.`{FIELD_SONG_ID}`  
-        WHERE fin.`{FIELD_HASH}` IN (%s)
-        AND son.`{FIELD_PUBLISHER}` = %s;
+        SELECT HEX(`{FIELD_HASH}`), `{FIELD_SONG_ID}`, `{FIELD_OFFSET}`
+        FROM `{FINGERPRINTS_TABLENAME}`
+        WHERE `{FIELD_HASH}` IN (%s);
     """
 
     SELECT_ALL = f"SELECT `{FIELD_SONG_ID}`, `{FIELD_OFFSET}` FROM `{FINGERPRINTS_TABLENAME}`;"
 
     SELECT_SONG = f"""
-        SELECT `{FIELD_SONGNAME}`, HEX(`{FIELD_FILE_SHA1}`) AS `{FIELD_FILE_SHA1}`, `{FIELD_TOTAL_HASHES}`
+        SELECT `{FIELD_SONGNAME}`, `{FIELD_PUBLISHER}`, `{FIELD_SONG_LENGTH}`, `{FIELD_SINGER}`, `{FIELD_ALBUM}`, 
+        `{FIELD_PUBLICTIME}`, HEX(`{FIELD_FILE_SHA1}`) AS `{FIELD_FILE_SHA1}`, `{FIELD_TOTAL_HASHES}`
         FROM `{SONGS_TABLENAME}`
         WHERE `{FIELD_SONG_ID}` = %s;
     """
 
     SELECT_SONGS_BY_IDS = f"""
-        SELECT `{FIELD_SONG_ID}`, `{FIELD_SONGNAME}`, 
-            HEX(`{FIELD_FILE_SHA1}`) AS `{FIELD_FILE_SHA1}`, `{FIELD_TOTAL_HASHES}`
+        SELECT `{FIELD_SONG_ID}`, `{FIELD_SONGNAME}`, `{FIELD_PUBLISHER}`, `{FIELD_SONG_LENGTH}`, `{FIELD_SINGER}`, 
+            `{FIELD_ALBUM}`, `{FIELD_PUBLICTIME}`, HEX(`{FIELD_FILE_SHA1}`) AS `{FIELD_FILE_SHA1}`, 
+            `{FIELD_TOTAL_HASHES}`
         FROM `{SONGS_TABLENAME}`
         WHERE `{FIELD_SONG_ID}` IN (%s);
     """
@@ -103,6 +106,11 @@ class MySQLDatabase(CommonDatabase):
         SELECT
             `{FIELD_SONG_ID}`
         ,   `{FIELD_SONGNAME}`
+        ,   `{FIELD_PUBLISHER}`
+        ,   `{FIELD_SONG_LENGTH}`
+        ,   `{FIELD_SINGER}`
+        ,   `{FIELD_ALBUM}`
+        ,   `{FIELD_PUBLICTIME}`
         ,   HEX(`{FIELD_FILE_SHA1}`) AS `{FIELD_FILE_SHA1}`
         ,   `{FIELD_TOTAL_HASHES}`
         ,   `date_created`
@@ -142,7 +150,8 @@ class MySQLDatabase(CommonDatabase):
         # the previous process.
         Cursor.clear_cache()
 
-    def insert_song(self, song_name: str, file_hash: str, total_hashes: int) -> int:
+    def insert_song(self, song_name: str, file_hash: str, total_hashes: int, song_publisher: str = '',
+                    song_length: float = 0, song_singer: str = '', song_album: str = '', song_public: str = '') -> int:
         """
         Inserts a song name into the database, returns the new
         identifier of the song.
@@ -150,10 +159,16 @@ class MySQLDatabase(CommonDatabase):
         :param song_name: The name of the song.
         :param file_hash: Hash from the fingerprinted file.
         :param total_hashes: amount of hashes to be inserted on fingerprint table.
+        :param song_publisher: The publisher of the song.
+        :param song_length: The length of the song.
+        :param song_singer: The singer of the song.
+        :param song_album: The album of the song.
+        :param song_public: The public time of the song.
         :return: the inserted id.
         """
         with self.cursor() as cur:
-            cur.execute(self.INSERT_SONG, (song_name, file_hash, total_hashes))
+            cur.execute(self.INSERT_SONG, (song_name, file_hash, total_hashes, song_publisher, song_length, song_singer,
+                                           song_album, song_public))
             return cur.lastrowid
 
     def __getstate__(self):
@@ -168,6 +183,7 @@ def cursor_factory(**factory_options):
     def cursor(**options):
         options.update(factory_options)
         return Cursor(**options)
+
     return cursor
 
 

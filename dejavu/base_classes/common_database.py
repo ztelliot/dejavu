@@ -13,7 +13,6 @@ class CommonDatabase(BaseDatabase, metaclass=abc.ABCMeta):
 
     def __init__(self):
         super().__init__()
-        self.audio_file_publisher = None
 
     def before_fork(self) -> None:
         """
@@ -65,7 +64,7 @@ class CommonDatabase(BaseDatabase, metaclass=abc.ABCMeta):
         """
         with self.cursor(buffered=True) as cur:
             cur.execute(self.SELECT_UNIQUE_SONG_IDS)
-            count = cur.fetchone()[0] if cur.rowcount != 0 else 0
+            count = cur.fetchone()[0] if cur.cursor.rowcount != 0 else 0
 
         return count
 
@@ -77,7 +76,7 @@ class CommonDatabase(BaseDatabase, metaclass=abc.ABCMeta):
         """
         with self.cursor(buffered=True) as cur:
             cur.execute(self.SELECT_NUM_FINGERPRINTS)
-            count = cur.fetchone()[0] if cur.rowcount != 0 else 0
+            count = cur.fetchone()[0] if cur.cursor.rowcount != 0 else 0
 
         return count
 
@@ -149,7 +148,8 @@ class CommonDatabase(BaseDatabase, metaclass=abc.ABCMeta):
             cur.execute(self.INSERT_FINGERPRINT, (fingerprint, song_id, offset))
 
     @abc.abstractmethod
-    def insert_song(self, song_name: str, file_hash: str, total_hashes: int) -> int:
+    def insert_song(self, song_name: str, file_hash: str, total_hashes: int, song_publisher: str, song_length: float,
+                    song_singer: str, song_album: str, song_public: str) -> int:
         """
         Inserts a song name into the database, returns the new
         identifier of the song.
@@ -157,6 +157,11 @@ class CommonDatabase(BaseDatabase, metaclass=abc.ABCMeta):
         :param song_name: The name of the song.
         :param file_hash: Hash from the fingerprinted file.
         :param total_hashes: amount of hashes to be inserted on fingerprint table.
+        :param song_publisher: The publisher of the song.
+        :param song_length: The length of the song.
+        :param song_singer: The singer of the song.
+        :param song_album: The album of the song.
+        :param song_public: The public time of the song.
         :return: the inserted id.
         """
         pass
@@ -233,9 +238,8 @@ class CommonDatabase(BaseDatabase, metaclass=abc.ABCMeta):
         with self.cursor() as cur:
             for index in range(0, len(values), batch_size):
                 # Create our IN part of the query
-                query = self.SELECT_MULTIPLE % (', '.join([self.IN_MATCH] * len(values[index: index + batch_size])),
-                                                "%s")
-                cur.execute(query, values[index: index + batch_size] + [self.audio_file_publisher])
+                query = self.SELECT_MULTIPLE % (', '.join([self.IN_MATCH] * len(values[index: index + batch_size])))
+                cur.execute(query, values[index: index + batch_size])
 
                 cur_rows = cur.fetchall()
 

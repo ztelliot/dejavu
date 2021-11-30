@@ -3,6 +3,11 @@
 # DEJAVU JSON RESPONSE
 SONG_ID = "song_id"
 SONG_NAME = 'song_name'
+SONG_PUBLISHER = 'song_publisher'
+SONG_LENGTH = 'song_length'
+SONG_SINGER = 'song_singer'
+SONG_ALBUM = 'song_album'
+SONG_PUBLICTIME = 'song_public'
 RESULTS = 'results'
 
 HASHES_MATCHED = 'hashes_matched_in_input'
@@ -26,8 +31,8 @@ OFFSET_SECS = 'offset_seconds'
 
 # DATABASE CLASS INSTANCES:
 DATABASES = {
-    'mysql': ("dejavu.database_handler.mysql_database", "MySQLDatabase"),
-    'postgres': ("dejavu.database_handler.postgres_database", "PostgreSQLDatabase")
+    'mysql': ("dejavu.database_handler.mysql_database", "MySQLDatabase")
+    # 'postgres': ("dejavu.database_handler.postgres_database", "PostgreSQLDatabase")
 }
 
 # TABLE SONGS
@@ -39,8 +44,11 @@ FIELD_SONGNAME = 'song_name'
 FIELD_FINGERPRINTED = "fingerprinted"
 FIELD_FILE_SHA1 = 'file_sha1'
 FIELD_TOTAL_HASHES = 'total_hashes'
-FIELD_PUBLISHER = 'publisher'
+FIELD_PUBLISHER = 'song_publisher'
 FIELD_SONG_LENGTH = 'song_length'
+FIELD_SINGER = 'song_singer'
+FIELD_ALBUM = 'song_album'
+FIELD_PUBLICTIME = 'song_public'
 
 # TABLE FINGERPRINTS
 FINGERPRINTS_TABLENAME = "fingerprints"
@@ -72,13 +80,13 @@ DEFAULT_OVERLAP_RATIO = 0.5
 
 # Degree to which a fingerprint can be paired with its neighbors. Higher values will
 # cause more fingerprints, but potentially better accuracy.
-DEFAULT_FAN_VALUE = 15  # 15 was the original value.
+DEFAULT_FAN_VALUE = 5  # 15 was the original value.
 
 # Minimum amplitude in spectrogram in order to be considered a peak.
 # This can be raised to reduce number of fingerprints, but can negatively
 # affect accuracy.
-#DEFAULT_AMP_MIN = 10
-DEFAULT_AMP_MIN = 5
+DEFAULT_AMP_MIN = 10
+# DEFAULT_AMP_MIN = 5
 
 # Number of cells around an amplitude peak in the spectrogram in order
 # for Dejavu to consider it a spectral peak. Higher values mean less
@@ -102,4 +110,4 @@ PEAK_SORT = True
 FINGERPRINT_REDUCTION = 20
 
 # Number of results being returned for file recognition
-TOPN = 5
+TOPN = 2

@@ -14,22 +14,21 @@ from dejavu.config.settings import (DEFAULT_FS, DEFAULT_OVERLAP_RATIO,
                                     FINGERPRINTED_CONFIDENCE,
                                     FINGERPRINTED_HASHES, HASHES_MATCHED,
                                     INPUT_CONFIDENCE, INPUT_HASHES, OFFSET,
-                                    OFFSET_SECS, SONG_ID, SONG_NAME, TOPN)
+                                    OFFSET_SECS, SONG_ID, SONG_NAME, SONG_SINGER, SONG_ALBUM, SONG_LENGTH,
+                                    SONG_PUBLISHER, SONG_PUBLICTIME, SONGS_TABLENAME, TOPN)
 from dejavu.logic.fingerprint import fingerprint
-
+from dejavu.logic.information import information
 from dejavu.third_party.dejavu_timer import DejavuTimer
 
 
 class Dejavu:
-    def __init__(self, config, audio_file_publisher=None):
+    def __init__(self, config):
         self.config = config
-        self.audio_file_publisher = audio_file_publisher
 
         # initialize db
         db_cls = get_database(config.get("database_type", "mysql").lower())
 
         self.db = db_cls(**config.get("database", {}))
-        self.db.audio_file_publisher = audio_file_publisher
 
         # if we should limit seconds fingerprinted,
         # None|-1 means use entire track
@@ -107,7 +106,8 @@ class Dejavu:
         # Loop till we have all of them
         while True:
             try:
-                song_name, hashes, file_hash = next(iterator)
+                song_name, hashes, file_hash, song_publisher, song_length, song_singer, song_album, song_public = next(
+                    iterator)
             except multiprocessing.TimeoutError:
                 continue
             except StopIteration:
@@ -117,7 +117,8 @@ class Dejavu:
                 # Print traceback because we can't reraise it here
                 traceback.print_exc(file=sys.stdout)
             else:
-                sid = self.db.insert_song(song_name, file_hash, len(hashes))
+                sid = self.db.insert_song(song_name, file_hash, len(hashes), song_publisher, song_length, song_singer,
+                                          song_album, song_public)
 
                 self.db.insert_hashes(sid, hashes)
                 self.db.set_song_fingerprinted(sid)
@@ -126,28 +127,53 @@ class Dejavu:
         pool.close()
         pool.join()
 
-    def fingerprint_file(self, file_path: str, song_name: str = None) -> None:
+    def fingerprint_file(self, file_path: str) -> None:
         """
         Given a path to a file the method generates hashes for it and stores them in the database
         for later be queried.
 
         :param file_path: path to the file.
-        :param song_name: song name associated to the audio file.
         """
-        song_name_from_path = decoder.get_audio_name_from_path(file_path)
         song_hash = decoder.unique_hash(file_path)
-        song_name = song_name or song_name_from_path
         # don't refingerprint already fingerprinted files
         songhashes_set = self.__load_fingerprinted_audio_hashes()
         if song_hash in songhashes_set:
-            print(f"{song_name} already fingerprinted, continuing...")
+            print(f"{file_path} already fingerprinted, continuing...")
         else:
-            song_name, hashes, file_hash = Dejavu._fingerprint_worker(
-                file_path,
-                self.limit,
-                song_name=song_name
-            )
-            sid = self.db.insert_song(song_name, file_hash)
+            song_name, hashes, file_hash, song_publisher, song_length, song_singer, song_album, song_public = Dejavu._fingerprint_worker(
+                (file_path, self.limit))
+            sid = self.db.insert_song(song_name, file_hash, len(hashes), song_publisher, song_length, song_singer,
+                                      song_album, song_public)
+
+            self.db.insert_hashes(sid, hashes)
+            self.db.set_song_fingerprinted(sid)
+            self.__load_fingerprinted_audio_hashes()
+
+    def fingerprint_file_by_self(self, file_path: str, song_name: str, song_publisher: str = None,
+                                 song_length: float = 0, song_singer: str = None, song_album: str = None,
+                                 song_public: str = None) -> None:
+        """
+        Given a path to a file the method generates hashes for it and stores them in the database
+        for later be queried.
+
+        :param file_path: path to the file.
+        :param song_name: The name of the song.
+        :param song_publisher: The publisher of the song.
+        :param song_length: The length of the song.
+        :param song_singer: The singer of the song.
+        :param song_album: The album of the song.
+        :param song_public: The public time of the song.
+
+        """
+        song_hash = decoder.unique_hash(file_path)
+        # don't refingerprint already fingerprinted files
+        songhashes_set = self.__load_fingerprinted_audio_hashes()
+        if song_hash in songhashes_set:
+            print(f"{file_path} already fingerprinted, continuing...")
+        else:
+            hashes, file_hash = Dejavu._fingerprint_worker((file_path, self.limit), False)
+            sid = self.db.insert_song(song_name, file_hash, len(hashes), song_publisher, song_length, song_singer,
+                                      song_album, song_public)
 
             self.db.insert_hashes(sid, hashes)
             self.db.set_song_fingerprinted(sid)
@@ -218,12 +244,22 @@ class Dejavu:
 
             song_name = song.get(SONG_NAME, None)
             song_hashes = song.get(FIELD_TOTAL_HASHES, None)
+            song_publisher = song.get(SONG_PUBLISHER, None)
+            song_length = song.get(SONG_LENGTH, None)
+            song_singer = song.get(SONG_SINGER, None)
+            song_album = song.get(SONG_ALBUM, None)
+            song_public = song.get(SONG_PUBLICTIME, None)
             nseconds = round(float(offset) / DEFAULT_FS * DEFAULT_WINDOW_SIZE * DEFAULT_OVERLAP_RATIO, 5)
             hashes_matched = dedup_hashes[song_id]
 
             song = {
                 SONG_ID: song_id,
-                SONG_NAME: song_name.encode("utf8"),
+                SONG_NAME: song_name,
+                SONG_ALBUM: song_album,
+                SONG_SINGER: song_singer,
+                SONG_PUBLISHER: song_publisher,
+                SONG_PUBLICTIME: song_public,
+                SONG_LENGTH: song_length,
                 INPUT_HASHES: queried_hashes,
                 FINGERPRINTED_HASHES: song_hashes,
                 HASHES_MATCHED: hashes_matched,
@@ -246,7 +282,7 @@ class Dejavu:
         return r.recognize(*options, **kwoptions)
 
     @staticmethod
-    def _fingerprint_worker(arguments):
+    def _fingerprint_worker(arguments, info=True):
         # Pool.imap sends arguments as tuples so we have to unpack
         # them ourself.
         try:
@@ -254,11 +290,13 @@ class Dejavu:
         except ValueError:
             pass
 
-        song_name, extension = os.path.splitext(os.path.basename(file_name))
-
         fingerprints, file_hash = Dejavu.get_file_fingerprints(file_name, limit, print_output=True)
 
-        return song_name, fingerprints, file_hash
+        if info:
+            song_name, song_publisher, song_length, song_singer, song_album, song_public = information(file_name)
+            return song_name, fingerprints, file_hash, song_publisher, song_length, song_singer, song_album, song_public
+
+        return fingerprints, file_hash
 
     @staticmethod
     def get_file_fingerprints(file_name: str, limit: int, print_output: bool = False):
