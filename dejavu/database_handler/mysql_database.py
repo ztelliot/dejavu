@@ -23,7 +23,7 @@ class MySQLDatabase(CommonDatabase):
         ,   `{FIELD_FILE_SHA1}` BINARY(20) NOT NULL
         ,   `{FIELD_TOTAL_HASHES}` INT NOT NULL DEFAULT 0
         ,   `{FIELD_PUBLISHER}` VARCHAR(64) DEFAULT 'Unknown'
-        ,   `{FIELD_SONG_LENGTH}` FLOAT DEFAULT NULL
+        ,   `{FIELD_SONG_LENGTH}` FLOAT DEFAULT 0
         ,   `{FIELD_SINGER}` VARCHAR(64) DEFAULT 'Unknown'
         ,   `{FIELD_ALBUM}` VARCHAR(64) DEFAULT 'Unknown'
         ,   `{FIELD_PUBLICTIME}` VARCHAR(64) DEFAULT 'Unknown'
@@ -80,7 +80,7 @@ class MySQLDatabase(CommonDatabase):
     SELECT_ALL = f"SELECT `{FIELD_SONG_ID}`, `{FIELD_OFFSET}` FROM `{FINGERPRINTS_TABLENAME}`;"
 
     SELECT_SONG = f"""
-        SELECT `{FIELD_SONGNAME}`, `{FIELD_PUBLISHER}`, `{FIELD_SONG_LENGTH}`, `{FIELD_SINGER}`, `{FIELD_ALBUM}`, 
+        SELECT `{FIELD_SONGNAME}`, `{FIELD_PUBLISHER}`, `{FIELD_SONG_LENGTH}`, `{FIELD_SINGER}`, `{FIELD_ALBUM}`,
         `{FIELD_PUBLICTIME}`, HEX(`{FIELD_FILE_SHA1}`) AS `{FIELD_FILE_SHA1}`, `{FIELD_TOTAL_HASHES}`
         FROM `{SONGS_TABLENAME}`
         WHERE `{FIELD_SONG_ID}` = %s;
@@ -183,7 +183,6 @@ def cursor_factory(**factory_options):
     def cursor(**options):
         options.update(factory_options)
         return Cursor(**options)
-
     return cursor
 
 

@@ -189,7 +189,7 @@ class CommonDatabase(BaseDatabase, metaclass=abc.ABCMeta):
         """
         return self.query(None)
 
-    def insert_hashes(self, song_id: int, hashes: List[Tuple[str, int]], batch_size: int = 1000) -> None:
+    def insert_hashes(self, song_id: int, hashes: List[Tuple[str, int]], batch_size: int = 10000) -> None:
         """
         Insert a multitude of fingerprints.
 

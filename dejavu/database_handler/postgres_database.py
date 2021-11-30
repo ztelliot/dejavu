@@ -6,7 +6,8 @@ from psycopg2.extras import DictCursor
 from dejavu.base_classes.common_database import CommonDatabase
 from dejavu.config.settings import (FIELD_FILE_SHA1, FIELD_FINGERPRINTED,
                                     FIELD_HASH, FIELD_OFFSET, FIELD_SONG_ID,
-                                    FIELD_SONGNAME, FIELD_TOTAL_HASHES,
+                                    FIELD_SONGNAME, FIELD_TOTAL_HASHES, FIELD_PUBLISHER, FIELD_SONG_LENGTH,
+                                    FIELD_SINGER, FIELD_ALBUM, FIELD_PUBLICTIME,
                                     FINGERPRINTS_TABLENAME, SONGS_TABLENAME)
 
 
@@ -21,6 +22,11 @@ class PostgreSQLDatabase(CommonDatabase):
         ,   "{FIELD_FINGERPRINTED}" SMALLINT DEFAULT 0
         ,   "{FIELD_FILE_SHA1}" BYTEA
         ,   "{FIELD_TOTAL_HASHES}" INT NOT NULL DEFAULT 0
+        ,   `{FIELD_PUBLISHER}` VARCHAR(64) DEFAULT 'Unknown'
+        ,   `{FIELD_SONG_LENGTH}` FLOAT DEFAULT 0
+        ,   `{FIELD_SINGER}` VARCHAR(64) DEFAULT 'Unknown'
+        ,   `{FIELD_ALBUM}` VARCHAR(64) DEFAULT 'Unknown'
+        ,   `{FIELD_PUBLICTIME}` VARCHAR(64) DEFAULT 'Unknown'
         ,   "date_created" TIMESTAMP NOT NULL DEFAULT now()
         ,   "date_modified" TIMESTAMP NOT NULL DEFAULT now()
         ,   CONSTRAINT "pk_{SONGS_TABLENAME}_{FIELD_SONG_ID}" PRIMARY KEY ("{FIELD_SONG_ID}")
@@ -59,8 +65,9 @@ class PostgreSQLDatabase(CommonDatabase):
     """
 
     INSERT_SONG = f"""
-        INSERT INTO "{SONGS_TABLENAME}" ("{FIELD_SONGNAME}", "{FIELD_FILE_SHA1}","{FIELD_TOTAL_HASHES}")
-        VALUES (%s, decode(%s, 'hex'), %s)
+        INSERT INTO "{SONGS_TABLENAME}" ("{FIELD_SONGNAME}", "{FIELD_FILE_SHA1}","{FIELD_TOTAL_HASHES}",
+            `{FIELD_PUBLISHER}`,`{FIELD_SONG_LENGTH}`,`{FIELD_SINGER}`,`{FIELD_ALBUM}`,`{FIELD_PUBLICTIME}`)
+        VALUES (%s, decode(%s, 'hex'), %s, %s, %s, %s, %s, %s)
         RETURNING "{FIELD_SONG_ID}";
     """
 
@@ -81,8 +88,8 @@ class PostgreSQLDatabase(CommonDatabase):
 
     SELECT_SONG = f"""
         SELECT
-            "{FIELD_SONGNAME}"
-        ,   upper(encode("{FIELD_FILE_SHA1}", 'hex')) AS "{FIELD_FILE_SHA1}"
+            "{FIELD_SONGNAME}", `{FIELD_PUBLISHER}`, `{FIELD_SONG_LENGTH}`, `{FIELD_SINGER}`, `{FIELD_ALBUM}`
+        ,   `{FIELD_PUBLICTIME}`, upper(encode("{FIELD_FILE_SHA1}", 'hex')) AS "{FIELD_FILE_SHA1}"
         ,   "{FIELD_TOTAL_HASHES}"
         FROM "{SONGS_TABLENAME}"
         WHERE "{FIELD_SONG_ID}" = %s;
@@ -100,6 +107,11 @@ class PostgreSQLDatabase(CommonDatabase):
         SELECT
             "{FIELD_SONG_ID}"
         ,   "{FIELD_SONGNAME}"
+        ,   `{FIELD_PUBLISHER}`
+        ,   `{FIELD_SONG_LENGTH}`
+        ,   `{FIELD_SINGER}`
+        ,   `{FIELD_ALBUM}`
+        ,   `{FIELD_PUBLICTIME}`
         ,   upper(encode("{FIELD_FILE_SHA1}", 'hex')) AS "{FIELD_FILE_SHA1}"
         ,   "{FIELD_TOTAL_HASHES}"
         ,   "date_created"
@@ -141,7 +153,8 @@ class PostgreSQLDatabase(CommonDatabase):
         # the previous process.
         Cursor.clear_cache()
 
-    def insert_song(self, song_name: str, file_hash: str, total_hashes: int) -> int:
+    def insert_song(self, song_name: str, file_hash: str, total_hashes: int, song_publisher: str = '',
+                    song_length: float = 0, song_singer: str = '', song_album: str = '', song_public: str = '') -> int:
         """
         Inserts a song name into the database, returns the new
         identifier of the song.
@@ -149,10 +162,16 @@ class PostgreSQLDatabase(CommonDatabase):
         :param song_name: The name of the song.
         :param file_hash: Hash from the fingerprinted file.
         :param total_hashes: amount of hashes to be inserted on fingerprint table.
+        :param song_publisher: The publisher of the song.
+        :param song_length: The length of the song.
+        :param song_singer: The singer of the song.
+        :param song_album: The album of the song.
+        :param song_public: The public time of the song.
         :return: the inserted id.
         """
         with self.cursor() as cur:
-            cur.execute(self.INSERT_SONG, (song_name, file_hash, total_hashes))
+            cur.execute(self.INSERT_SONG, (song_name, file_hash, total_hashes, song_publisher, song_length, song_singer,
+                                           song_album, song_public))
             return cur.fetchone()[0]
 
     def __getstate__(self):

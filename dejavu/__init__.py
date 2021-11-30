@@ -1,5 +1,4 @@
 import multiprocessing
-import os
 import sys
 import traceback
 from itertools import groupby
@@ -69,7 +68,7 @@ class Dejavu:
         """
         self.db.delete_songs_by_id(song_ids)
 
-    def fingerprint_directory(self, path: str, extensions: str, nprocesses: int = None) -> None:
+    def fingerprint_directory(self, path: str, extensions: list[str], nprocesses: int = None) -> None:
         """
         Given a directory and a set of extensions it fingerprints all files that match each extension specified.
 
@@ -288,7 +287,7 @@ class Dejavu:
         try:
             file_name, limit = arguments
         except ValueError:
-            pass
+            raise
 
         fingerprints, file_hash = Dejavu.get_file_fingerprints(file_name, limit, print_output=True)
 
